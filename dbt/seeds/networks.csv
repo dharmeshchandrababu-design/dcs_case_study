@@ -1,0 +1,23 @@
+network,network_role,aliases
+CHARGE NOW,dcs,charge now|chargenow|bmw charging|mini charging|mercedes me charge|digital charging solutions|dcs
+Ionity,cpo,ionity|iontity
+Fastned,cpo,fastned
+Allego,cpo,allego
+Aral pulse,cpo,aral pulse|aral
+EWE Go,cpo,ewe go|ewe
+Electra,cpo,electra
+Vattenfall,cpo,vattenfall|incharge
+Smatrics,cpo,smatrics
+Pfalzwerke,cpo,pfalzwerke
+Lidl or Aldi,cpo,lidl|aldi|aldi süd|aldi nord|kaufland
+Stadtwerke,cpo,stadtwerke.*|swt
+Tesla,both,tesla|supercharger|tesla supercharger
+EnBW,both,enbw|mobility\+|enbw mobility\+
+Shell Recharge,both,shell recharge|shellrecharge|shell
+Elli,both,elli|volkswagen elli
+Plugsurfing,emsp_competitor,plugsurfing
+Maingau,emsp_competitor,maingau|einfachstromladen
+ADAC e-Charge,emsp_competitor,adac e-charge|adac
+Cariqa,emsp_competitor,cariqa
+Chargemap,emsp_competitor,chargemap
+Porsche Charging,emsp_competitor,porsche charging|porsche

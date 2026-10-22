@@ -1,0 +1,30 @@
+version: 2
+models:
+  - name: stg_posts
+    description: EV charging posts, cleaned and typed. Incremental, unique on post_id.
+    columns:
+      - name: post_id
+        tests: [unique, not_null]
+      - name: region_tag
+        tests:
+          - accepted_values:
+              arguments: {values: [europe, outside, unknown]}
+  - name: stg_labels
+    description: The chosen label per post (AI labels win over the keyword baseline, newest wins).
+    columns:
+      - name: post_id
+        tests: [unique, not_null]
+      - name: sentiment
+        tests:
+          - accepted_values:
+              arguments: {values: [positive, neutral, negative, mixed]}
+      - name: feedback_type
+        tests:
+          - accepted_values:
+              arguments: {values: [complaint, praise, request, question, information]}
+      - name: severity
+        tests:
+          - accepted_values:
+              arguments: {values: [safety, legal, financial, none]}
+      - name: label_confidence
+        description: The labeller's own certainty. Rough; used to spot doubtful posts, not as a precise measure.

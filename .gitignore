@@ -1,0 +1,13 @@
+.venv/
+.env
+data/raw/
+data/*.duckdb
+data/*.duckdb.wal
+__pycache__/
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+*.log
+.DS_Store
+_to_delete/
+findings/labels_review.csv

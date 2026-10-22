@@ -1,0 +1,42 @@
+# Extension agreed with DCS: the wider EV charging conversation.
+name: ev_charging
+window_days: 365
+include_retweets: false    # keep original customer voice; is_retweet is still extracted
+max_pages: 10              # about 200 posts per search, spreads the free credits
+sleep_seconds: 6
+# Every search (except exempt themes) must also contain an EV term,
+# and English searches a European term, to keep phones and the US out.
+ev_terms:
+  en: '(EV OR EVs OR "electric car" OR "electric vehicle" OR "charge point" OR "charging station" OR wallbox)'
+  de: '(Elektroauto OR E-Auto OR Elektrofahrzeug OR Ladesäule OR Ladestation OR Ladepunkt OR Wallbox)'
+eu_terms:
+  en: '(Europe OR European OR Germany OR Berlin OR Ionity OR Plugsurfing OR EnBW OR Fastned OR Allego OR euros OR "Type 2")'
+exempt_themes: ["8 Competitors", "9 Regulation"]
+searches:
+  - {theme: "1 Access/roaming", lang: en, terms: '(RFID OR "charging card" OR "charge card") (rejected OR declined OR "not accepted" OR "doesn''t work")'}
+  - {theme: "1 Access/roaming", lang: en, terms: '(roaming OR "charging app") (problem OR issue OR frustrating OR nightmare)'}
+  - {theme: "2 Price", lang: en, terms: '("per kWh" OR "roaming fee" OR surcharge OR "hidden fee" OR "too expensive" OR price)'}
+  - {theme: "3 Billing", lang: en, terms: '(invoice OR billed OR "charged twice" OR "double charged" OR refund)'}
+  - {theme: "4 App", lang: en, terms: '("charging app" OR "charge app") (crash OR "can''t log" OR slow OR bug OR useless OR "doesn''t show")'}
+  - {theme: "5 Reliability", lang: en, terms: '(broken OR "out of order" OR "not working" OR offline)'}
+  - {theme: "5 Reliability", lang: en, terms: '(occupied OR queue OR "blocked by" OR waiting)'}
+  - {theme: "6 Alternatives", lang: en, terms: '(contactless OR "credit card" OR "card payment")'}
+  - {theme: "8 Competitors", lang: en, terms: '(Ionity OR Plugsurfing OR "Shell Recharge" OR EnBW OR Fastned OR Allego) (problem OR broken OR expensive OR great OR love)'}
+  - {theme: "7 Fleet", lang: en, terms: '("company car" OR fleet) (charging) (reimburse OR expenses OR card OR billing)'}
+  - {theme: "9 Regulation", lang: en, terms: '(AFIR OR Eichrecht) (charging OR charger)'}
+  - {theme: "Praise", lang: en, terms: '("great charging experience" OR "charging worked" OR "easy to charge" OR seamless)'}
+  - {theme: "Discovery", lang: en, terms: '("EV charging" OR "public charging") (wish OR "why can''t" OR frustrating OR annoying)'}
+  - {theme: "Discovery trip", lang: en, terms: '("road trip" OR "long distance") (charging) (plan OR stops OR problem)'}
+  - {theme: "Discovery home", lang: en, terms: '("home charger" OR "home charging") (cost OR install OR bill OR billing OR problem)'}
+  - {theme: "1 Access/roaming", lang: de, terms: '(Ladekarte OR Ladekarten OR RFID) ("funktioniert nicht" OR abgelehnt OR "nicht akzeptiert")'}
+  - {theme: "1 Access/roaming", lang: de, terms: '("Lade-App" OR Ladeapp OR Roaming) (Problem OR nervig OR Fehler OR unmöglich)'}
+  - {theme: "2 Price", lang: de, terms: '(Ladepreis OR Ladepreise OR "pro kWh" OR Ladekosten OR Roaminggebühr) (teuer OR Wucher OR undurchsichtig)'}
+  - {theme: "3 Billing", lang: de, terms: '(Laden OR Ladevorgang) (Rechnung OR abgerechnet OR "doppelt abgerechnet" OR Erstattung)'}
+  - {theme: "5 Reliability", lang: de, terms: '(defekt OR kaputt OR "außer Betrieb" OR "geht nicht" OR blockiert OR besetzt)'}
+  - {theme: "6 Alternatives", lang: de, terms: '(Kartenzahlung OR EC-Karte OR Kreditkarte OR kontaktlos)'}
+  - {theme: "8 Competitors", lang: de, terms: '(Ionity OR Plugsurfing OR "Shell Recharge" OR EnBW OR Fastned OR Allego OR Elli) (Problem OR teuer OR super OR Ärger)'}
+  - {theme: "7 Fleet", lang: de, terms: '(Dienstwagen OR Firmenwagen OR Flotte) (Laden OR Ladekarte) (Abrechnung OR Erstattung)'}
+  - {theme: "9 Regulation", lang: de, terms: '(Eichrecht OR AFIR OR Ladesäulenverordnung) (Laden OR Ladesäule)'}
+  - {theme: "Discovery", lang: de, terms: '(Laden OR Ladesäule) (nervig OR Frust OR "wünsche mir" OR "warum kann man nicht")'}
+  - {theme: "Discovery trip", lang: de, terms: '(Urlaub OR Langstrecke OR Reise) (Ladestopp OR Laden) (Problem OR planen)'}
+  - {theme: "Discovery home", lang: de, terms: '(Kosten OR Abrechnung OR Installation OR Problem)'}

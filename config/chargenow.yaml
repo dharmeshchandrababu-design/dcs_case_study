@@ -1,0 +1,8 @@
+# Original brief: posts mentioning #ChargeNow within a time interval.
+name: chargenow
+window_days: 4380          # default when --from/--to are not given (about 12 years)
+include_retweets: true     # the brief asks for is_retweet, so retweets are kept here
+max_pages: 100             # about 20 posts per page
+sleep_seconds: 6           # free-tier rate limit is about 1 request per 5 seconds
+searches:
+  - {theme: "ChargeNow hashtag", lang: null, terms: "#ChargeNow"}

@@ -1,0 +1,8 @@
+# Which labeller label.py uses. The labeller is one replaceable function.
+#   keyword   : rule-based baseline, no AI, always available (used as fallback and for comparison)
+#   ollama    : free local model on the laptop (no data leaves the machine)
+#   anthropic : Claude through the API (future option, needs ANTHROPIC_API_KEY)
+provider: ollama
+model: qwen2.5:7b          # for ollama; e.g. a claude model name for anthropic
+batch_size: 5              # posts per AI call (smaller batches = fewer skipped posts)
+source_config: ev_charging # which loaded posts to label
