@@ -9,6 +9,12 @@ labels each post with an AI model, and models the result in dbt so DCS teams get
   so the analysis is built on 1,597 EV charging posts from the last 12 months (German and English).
 - **Findings for the business teams:** see the findings deck.
 
+**Why this approach.** From my conversations with the team, I understood the role needs someone who builds
+reliable pipelines *and* turns the data into something internal stakeholders want to use. So I built the brief
+exactly as asked, then used the same pipeline to answer business questions: what drivers struggle with, how
+they see each network, where CHARGE NOW is (in)visible, and what Product, Pricing, Partner management and
+Marketing can do next. Every reporting model answers one business question for one team.
+
 ## Results in one view
 
 | | |
@@ -69,12 +75,17 @@ Airflow DAG. DuckDB runs locally; the dbt models would run on Snowflake by switc
 | Seeds | `taxonomy`, `networks` | Business knowledge: owner team, whether DCS can fix it, network role (dcs, cpo, emsp_competitor, both) |
 | Intermediate | `int_posts_enriched` | Joins posts, labels and networks; keeps relevant posts not clearly outside Europe; severity evidence check |
 | Core | `fct_posts`, `dim_theme`, `dim_network`, `dim_date` | Star schema, grain one post. No author dimension, for privacy |
-| Reporting | `mart_problem_ranking` | Which problems are frequent, negative and fixable by DCS, with owner team and priority score |
-| Reporting | `mart_network_scorecard` | Per network: posts, negative and positive share, top complaint, share of voice (CHARGE NOW listed at 0) |
-| Reporting | `mart_network_feedback` | What each network is praised and criticised for |
-| Reporting | `mart_voice_examples` | Drivers' own words (English and original), serious posts as DCS risk, partner risk or market watch |
-| Reporting | `mart_monthly_trend` | Monthly development for themes DCS can act on (small numbers, flagged) |
-| Reporting | `mart_search_funnel` | Relevance rate per search, groupable by topic and language: where the signal is |
+
+**Reporting marts: business question and value**
+
+| Mart | Business question | Value for the business | Main users |
+|---|---|---|---|
+| `mart_problem_ranking` | Which problems are frequent, negative and fixable by DCS? | A ranked backlog with an owner team per problem, so effort goes where drivers hurt most | Product, Pricing, Support |
+| `mart_network_scorecard` | How do drivers talk about each network, and how visible is CHARGE NOW? | Partner quality and competitor view in one table; shows CHARGE NOW's 0 share of voice | Partner management, Marketing |
+| `mart_network_feedback` | Why is each network praised or criticised? | The reasons behind the scorecard, input for partner reviews and positioning | Partner management, Product |
+| `mart_voice_examples` | What exactly do drivers say, and which posts are a risk? | Real quotes per problem (original and English) and flagged legal, financial or safety posts | All teams, Legal, Support |
+| `mart_monthly_trend` | Are the problems DCS can act on getting better or worse? | A monitor once the pipeline runs daily (small numbers today, flagged) | All teams |
+| `mart_search_funnel` | Which searches find real charging conversation? | Cuts API and labelling cost by dropping noisy searches | Data team |
 
 Every model and column is described in one YAML file per layer (`_sources.yml`, `_staging.yml`, `_intermediate.yml`,
 `_core.yml`, `_reporting.yml`, `_seeds.yml`); `dbt docs generate` shows them with the lineage.
@@ -237,6 +248,19 @@ real experiences (e.g. a driver reporting broken chargers). On the 28 reference 
   the same order an Airflow DAG would (extract, load, label, dbt build). In production each step becomes a task,
   scheduled daily with a 2 to 3 day window, with retries and alerts on failed or "stopped" runs and on unexpected
   empty results.
+
+## Target architecture at DCS scale
+
+```
+X, Reddit, forums, app reviews ─┐
+support tickets, session data ──┼─> landing zone (cloud storage, by date) ─> Snowflake raw
+                                │      extract + load: Python tasks in Airflow, retries and alerts
+                                └─> labelling: Claude / warehouse AI functions, versioned prompts
+Snowflake raw ─> dbt (same staging, intermediate, core, reporting models; tests and freshness) ─>
+   BI dashboards per team, daily link list for Marketing, semantic layer for self-service
+```
+The code in this repository is the same design at laptop scale: each step maps to one Airflow task, and the dbt
+models move to Snowflake by switching the adapter.
 
 ## What I would do next
 - Run daily: Airflow DAG with the four tasks, alert on failed or stopped runs and on unexpected empty results.
