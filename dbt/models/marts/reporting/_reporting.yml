@@ -402,6 +402,17 @@ models:
         data_tests:
           - unique
           - not_null
+      - name: search_topic
+        description: "Search topic without number and language, e.g. Access/roaming (group German and English together)"
+        data_tests:
+          - not_null
+      - name: search_lang
+        description: "Search language: de or en"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['de', 'en']
       - name: posts_found
         description: "Posts the search returned"
         data_tests:

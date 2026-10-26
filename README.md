@@ -72,12 +72,12 @@ Airflow DAG. DuckDB runs locally; the dbt models would run on Snowflake by switc
 | Reporting | `mart_network_feedback` | What each network is praised and criticised for |
 | Reporting | `mart_voice_examples` | Drivers' own words (English and original), serious posts as DCS risk, partner risk or market watch |
 | Reporting | `mart_monthly_trend` | Monthly development for themes DCS can act on (small numbers, flagged) |
-| Reporting | `mart_search_funnel` | Relevance rate per search: where the signal is |
+| Reporting | `mart_search_funnel` | Relevance rate per search, groupable by topic and language: where the signal is |
 
 Every model and column is described in one YAML file per layer (`_sources.yml`, `_staging.yml`, `_intermediate.yml`,
 `_core.yml`, `_reporting.yml`, `_seeds.yml`); `dbt docs generate` shows them with the lineage.
 
-**Tests (276 dbt tests and a freshness check).** Unique and not-null keys, accepted values, value ranges, column
+**Tests (279 dbt tests and a freshness check).** Unique and not-null keys, accepted values, value ranges, column
 comparisons, unique combinations, fact-to-dimension relationships, labels must exist in the taxonomy, no future
 posts, share of voice sums to 1, and no username or raw author id column may reach the core or reporting schemas.
 Range, comparison and combination tests are small local generic tests in `dbt/tests/generic/` (the same logic as
