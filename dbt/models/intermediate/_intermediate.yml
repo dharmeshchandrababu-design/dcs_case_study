@@ -1,0 +1,146 @@
+version: 2
+
+models:
+  - name: int_posts_enriched
+    description: "The shared join that every downstream model reuses: posts + chosen label + network seed. Keeps only posts labelled relevant and not clearly outside Europe. Adds engagement, the network key, and the evidence-checked severity. One row per post"
+    columns:
+      - name: post_id
+        description: "Unique identifier of the post on X (primary key)"
+        data_tests:
+          - unique
+          - not_null
+      - name: created_date
+        description: "Date the post was written (UTC)"
+        data_tests:
+          - not_null
+      - name: created_month
+        description: "First day of the month the post was written"
+        data_tests:
+          - not_null
+      - name: text
+        description: "Original post text"
+        data_tests:
+          - not_null
+      - name: text_en
+        description: "English text (original for English posts, translation for others). Warns if a translation is missing"
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: lang
+        description: "Language of the post as reported by X"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - de
+                  - en
+      - name: author_hash
+        description: "Salted SHA-256 hash of the author id, used only to count distinct authors"
+        data_tests:
+          - not_null
+      - name: follower_count
+        description: "Author's follower count when the post was fetched"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: region_tag
+        description: "Posts clearly outside Europe are excluded here, so only europe or unknown remain"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - europe
+                  - unknown
+      - name: engagement
+        description: "likes + retweets + replies + quotes"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: view_count
+        description: "Views of the post"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: theme_key
+        description: "theme/subcategory, the key into dim_theme"
+        data_tests:
+          - not_null
+      - name: sentiment
+        description: "Author's feeling about charging"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - positive
+                  - neutral
+                  - negative
+                  - mixed
+      - name: feedback_type
+        description: "What the post does: complaint, praise, request, question or information"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - complaint
+                  - praise
+                  - request
+                  - question
+                  - information
+      - name: severity_ai
+        description: "The labeller's severity, unchanged"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - safety
+                  - legal
+                  - financial
+                  - none
+      - name: severity
+        description: "Severity kept only when the text also contains matching evidence (macro severity_checked), else none. Reason: the small local model marked many high-price posts as financial although nobody was charged wrongly"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - safety
+                  - legal
+                  - financial
+                  - none
+      - name: label_confidence
+        description: "Labeller's own certainty from 0 to 1 (rough)"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: is_low_confidence
+        description: "True when label_confidence is below 0.5"
+        data_tests:
+          - not_null
+      - name: model_version
+        description: "Labeller, model and prompt version that produced the label"
+        data_tests:
+          - not_null
+      - name: network_raw
+        description: "The network name exactly as the labeller returned it"
+        data_tests:
+          - not_null
+      - name: network_key
+        description: "Network matched by name or alias in the networks seed (first name if the labeller listed several); none if no network is named, unknown if the name is not in the seed"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_network')
+                field: network_key

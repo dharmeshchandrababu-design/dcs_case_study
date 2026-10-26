@@ -1,9 +1,56 @@
 version: 2
+
 sources:
   - name: raw
-    description: Tables written by the Python steps. dbt only reads them.
+    description: "Tables written by the Python steps (load.py, label.py). dbt only reads them"
     tables:
       - name: posts
-        description: One row per post, written by load.py (required fields, hashed author id, no usernames).
+        description: "One row per post, latest version, written by load.py. Required fields of the brief, hashed author id, no usernames, @mentions masked. source_config tells which search configuration found it"
+        loaded_at_field: loaded_at
+        freshness:
+          warn_after:
+            count: 2
+            period: day
+          error_after:
+            count: 7
+            period: day
+        columns:
+          - name: post_id
+            description: "Unique identifier of the post on X"
+            data_tests:
+              - unique
+              - not_null
+          - name: source_config
+            description: "Search configuration that found the post (ev_charging or chargenow)"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values:
+                      - ev_charging
+                      - chargenow
+          - name: loaded_at
+            description: "Timestamp load.py loaded this version of the post"
+            data_tests:
+              - not_null
       - name: labels
-        description: AI labels written by label.py. One row per post and model_version; model_version records which labeller, model and prompt version produced the label. text_en is the English translation for relevant non-English posts.
+        description: "AI and keyword labels written by label.py. One row per post and model_version; model_version records the labeller, model and prompt version. text_en is the English translation of relevant non-English posts. updated_at changes whenever a row changes (new label or translation)"
+        data_tests:
+          - unique_combination_of_columns:
+              arguments:
+                combination_of_columns:
+                  - post_id
+                  - model_version
+        columns:
+          - name: post_id
+            description: "Unique identifier of the post on X"
+            data_tests:
+              - not_null
+          - name: model_version
+            description: "Labeller, model and prompt version that produced the label"
+            data_tests:
+              - not_null
+          - name: labelled_at
+            description: "Timestamp the label was created"
+            data_tests:
+              - not_null

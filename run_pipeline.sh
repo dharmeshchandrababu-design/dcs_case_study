@@ -17,4 +17,6 @@ python load.py --config chargenow        # original brief: writes data/output/ch
 python load.py --config ev_charging
 python label.py --provider keyword       # baseline labels (always available, fallback)
 python label.py                          # AI labels for posts without one, then English text for relevant posts
+python label.py --model qwen2.5:14b --only-relevant   # relabel relevant posts with the larger model (better sentiment and severity, see README)
 cd dbt && dbt build --profiles-dir .     # staging, intermediate, star schema, marts, tests
+dbt source freshness --profiles-dir .    # warns if raw.posts has had no new data for 2 days

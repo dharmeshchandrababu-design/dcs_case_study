@@ -1,0 +1,328 @@
+version: 2
+
+models:
+  - name: fct_posts
+    description: "Fact table of the star schema. Grain: one relevant post not clearly outside Europe. Keys to dim_date, dim_theme and dim_network; flags make counting simple. No author dimension on purpose: author_hash is kept only to count distinct authors"
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: is_positive + is_negative <= 1
+      - expression_is_true:
+          arguments:
+            expression: (is_serious = 1) = (severity <> 'none')
+      - expression_is_true:
+          arguments:
+            expression: (is_negative = 1) = (sentiment in ('negative', 'mixed'))
+    columns:
+      - name: post_id
+        description: "Unique identifier of the post on X (primary key)"
+        data_tests:
+          - unique
+          - not_null
+      - name: date_key
+        description: "Date the post was written. Key into dim_date"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: theme_key
+        description: "Key into dim_theme"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_theme')
+                field: theme_key
+      - name: network_key
+        description: "Key into dim_network"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_network')
+                field: network_key
+      - name: network_raw
+        description: "The network name as the labeller returned it"
+        data_tests:
+          - not_null
+      - name: author_hash
+        description: "Hashed author id, only for counting distinct authors"
+        data_tests:
+          - not_null
+      - name: lang
+        description: "Language of the post as reported by X"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - de
+                  - en
+      - name: region_tag
+        description: "europe or unknown (posts clearly outside Europe are excluded)"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - europe
+                  - unknown
+      - name: sentiment
+        description: "Author's feeling about charging"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - positive
+                  - neutral
+                  - negative
+                  - mixed
+      - name: feedback_type
+        description: "What the post does: complaint, praise, request, question or information"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - complaint
+                  - praise
+                  - request
+                  - question
+                  - information
+      - name: severity
+        description: "Evidence-checked severity (see int_posts_enriched)"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - safety
+                  - legal
+                  - financial
+                  - none
+      - name: severity_ai
+        description: "Raw AI severity, for comparison"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - safety
+                  - legal
+                  - financial
+                  - none
+      - name: label_confidence
+        description: "Labeller's own certainty from 0 to 1 (rough)"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: is_low_confidence
+        description: "Flag indicating that label_confidence is below 0.5"
+        data_tests:
+          - not_null
+      - name: model_version
+        description: "Labeller, model and prompt version that produced the label"
+        data_tests:
+          - not_null
+      - name: follower_count
+        description: "Author's follower count when the post was fetched"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: engagement
+        description: "likes + retweets + replies + quotes"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: view_count
+        description: "Views of the post"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: is_negative
+        description: "1 if sentiment is negative or mixed, else 0"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 0
+                  - 1
+                quote: false
+      - name: is_positive
+        description: "1 if sentiment is positive, else 0"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 0
+                  - 1
+                quote: false
+      - name: is_request
+        description: "1 if the post asks for something, else 0"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 0
+                  - 1
+                quote: false
+      - name: is_serious
+        description: "1 if the evidence-checked severity is safety, legal or financial, else 0"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 0
+                  - 1
+                quote: false
+      - name: text
+        description: "Post text with @mentions replaced by @user"
+        data_tests:
+          - not_null
+      - name: text_en
+        description: "English text of the post"
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+  - name: dim_theme
+    description: "One row per problem (theme and subcategory) from the taxonomy seed, with the business view: owner team and whether DCS can fix it"
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - theme
+              - subcategory
+      - expression_is_true:
+          arguments:
+            expression: theme_key = theme || '/' || subcategory
+    columns:
+      - name: theme_key
+        description: "theme/subcategory. Primary key"
+        data_tests:
+          - unique
+          - not_null
+      - name: theme
+        description: "Main topic, from the taxonomy seed"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - access_roaming
+                  - price
+                  - billing_payment
+                  - app_digital
+                  - reliability
+                  - coverage
+                  - home_fleet
+                  - regulation
+                  - experience
+                  - other
+      - name: subcategory
+        description: "Subtopic, from the taxonomy seed"
+        data_tests:
+          - not_null
+      - name: owner_team
+        description: "The DCS team that would act on this problem"
+        data_tests:
+          - not_null
+      - name: dcs_lever
+        description: "yes = DCS can fix it directly, partly = DCS can influence it (partners, routing, information), no = outside DCS"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 'yes'
+                  - partly
+                  - 'no'
+      - name: lever_weight
+        description: "1.0 for yes, 0.6 for partly, 0.2 for no. Used in the priority score"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 1.0
+                  - 0.6
+                  - 0.2
+                quote: false
+      - name: description
+        description: "Plain-language definition of the problem"
+        data_tests:
+          - not_null
+
+  - name: dim_network
+    description: "Charging networks and their role for DCS, plus \"none\" (no network named) and \"unknown\" (not in the seed yet)"
+    columns:
+      - name: network_key
+        description: "Network name in lower case. Primary key"
+        data_tests:
+          - unique
+          - not_null
+      - name: network
+        description: "Display name"
+        data_tests:
+          - unique
+          - not_null
+      - name: network_role
+        description: "dcs, cpo (partner whose chargers DCS customers use), emsp_competitor, both (CPO and eMSP), none, unknown"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - dcs
+                  - cpo
+                  - emsp_competitor
+                  - both
+                  - none
+                  - unknown
+
+  - name: dim_date
+    description: "One row per day between the first and the last post"
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: week_start <= date_key and month_start <= date_key
+    columns:
+      - name: date_key
+        description: "The day. Primary key"
+        data_tests:
+          - unique
+          - not_null
+      - name: week_start
+        description: "Monday of the week"
+        data_tests:
+          - not_null
+      - name: month_start
+        description: "First day of the month"
+        data_tests:
+          - not_null
+      - name: quarter_label
+        description: "Quarter, e.g. Q3 2026"
+        data_tests:
+          - not_null
+      - name: year
+        description: "Calendar year"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 2014
+                max_value: 2100

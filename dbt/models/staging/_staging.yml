@@ -1,30 +1,252 @@
 version: 2
+
 models:
   - name: stg_posts
-    description: EV charging posts, cleaned and typed. Incremental, unique on post_id.
+    description: "EV charging posts, cleaned and typed. One row per post. Incremental: each run adds only posts loaded since the last run (loaded_at), merged by post_id"
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: created_month <= created_date
+      - expression_is_true:
+          arguments:
+            expression: extracted_at <= loaded_at
     columns:
       - name: post_id
-        tests: [unique, not_null]
+        description: "The post's id on X. Primary key"
+        data_tests:
+          - unique
+          - not_null
+      - name: created_at
+        description: "When the post was written (UTC)"
+        data_tests:
+          - not_null
+      - name: created_date
+        description: "created_at as a date"
+        data_tests:
+          - not_null
+      - name: created_month
+        description: "First day of the month of created_at"
+        data_tests:
+          - not_null
+      - name: text
+        description: "Post text with @mentions replaced by @user"
+        data_tests:
+          - not_null
+      - name: lang
+        description: "Language of the post as reported by X"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - de
+                  - en
+      - name: author_hash
+        description: "Salted SHA-256 hash of the author id (first 16 characters). Counts distinct authors without identifying anyone"
+        data_tests:
+          - not_null
+      - name: follower_count
+        description: "The author's followers when the post was fetched"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: author_post_count
+        description: "The author's total number of posts (\"tweet count\" in the brief)"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: location_raw
+        description: "Location from the author's profile, self-reported free text (often empty, so no test)"
       - name: region_tag
-        tests:
+        description: "europe, outside or unknown, derived from location_raw. Approximate"
+        data_tests:
+          - not_null
           - accepted_values:
-              arguments: {values: [europe, outside, unknown]}
+              arguments:
+                values:
+                  - europe
+                  - outside
+                  - unknown
+      - name: hashtags
+        description: "Comma-separated hashtags of the post (empty when none, so no test)"
+      - name: is_retweet
+        description: "True if the post is a retweet"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - true
+                  - false
+                quote: false
+      - name: is_reply
+        description: "True if the post is a reply"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - true
+                  - false
+                quote: false
+      - name: like_count
+        description: "Likes (0 when missing)"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: retweet_count
+        description: "Retweets (0 when missing)"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: reply_count
+        description: "Replies (0 when missing)"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: quote_count
+        description: "Quotes (0 when missing)"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: view_count
+        description: "Views (0 when missing)"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: search_themes
+        description: "Every search that found the post, separated by \"; \""
+        data_tests:
+          - not_null
+      - name: extracted_at
+        description: "When the post was fetched from the API"
+        data_tests:
+          - not_null
+      - name: run_id
+        description: "The extract run that landed this version of the post"
+        data_tests:
+          - not_null
+      - name: loaded_at
+        description: "When load.py loaded this version. Drives the incremental logic"
+        data_tests:
+          - not_null
+
   - name: stg_labels
-    description: The chosen label per post (AI labels win over the keyword baseline, newest wins).
+    description: "The chosen label per post: AI labels win over the keyword baseline, the newest wins within a labeller. Incremental: each run only re-ranks posts whose labels changed since the last run, merged by post_id"
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: changed_at >= labelled_at
     columns:
       - name: post_id
-        tests: [unique, not_null]
+        description: "Unique identifier of the post on X (primary key)"
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_posts')
+                field: post_id
+      - name: relevant
+        description: "True if the post is about charging an electric vehicle"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - true
+                  - false
+                quote: false
+      - name: theme
+        description: "Main topic, from the taxonomy seed"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - access_roaming
+                  - price
+                  - billing_payment
+                  - app_digital
+                  - reliability
+                  - coverage
+                  - home_fleet
+                  - regulation
+                  - experience
+                  - other
+      - name: subcategory
+        description: "Subtopic, from the taxonomy seed (checked by the test assert_labels_match_taxonomy)"
+        data_tests:
+          - not_null
       - name: sentiment
-        tests:
+        description: "The author's feeling about charging"
+        data_tests:
+          - not_null
           - accepted_values:
-              arguments: {values: [positive, neutral, negative, mixed]}
+              arguments:
+                values:
+                  - positive
+                  - neutral
+                  - negative
+                  - mixed
       - name: feedback_type
-        tests:
+        description: "What the post does"
+        data_tests:
+          - not_null
           - accepted_values:
-              arguments: {values: [complaint, praise, request, question, information]}
+              arguments:
+                values:
+                  - complaint
+                  - praise
+                  - request
+                  - question
+                  - information
       - name: severity
-        tests:
+        description: "Raw AI severity (checked against the text later, in int_posts_enriched)"
+        data_tests:
+          - not_null
           - accepted_values:
-              arguments: {values: [safety, legal, financial, none]}
+              arguments:
+                values:
+                  - safety
+                  - legal
+                  - financial
+                  - none
+      - name: network_mentioned
+        description: "The network the labeller named, lower case, or none"
+        data_tests:
+          - not_null
       - name: label_confidence
-        description: The labeller's own certainty. Rough; used to spot doubtful posts, not as a precise measure.
+        description: "The labeller's own certainty (0 to 1). Rough; used to spot doubtful posts, not as a precise measure"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: model_version
+        description: "Labeller, model and prompt version, e.g. ollama:qwen2.5:14b:v3"
+        data_tests:
+          - not_null
+      - name: labelled_at
+        description: "When the label was created"
+        data_tests:
+          - not_null
+      - name: text_en
+        description: "English translation (relevant non-English posts only, so no not-null test here)"
+      - name: changed_at
+        description: "Last change of the chosen label row (label or translation). Drives the incremental logic"
+        data_tests:
+          - not_null

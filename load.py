@@ -144,7 +144,7 @@ def load_files(con, cfg, salt, new_files):
                              from raw.posts where post_id in (select post_id from incoming_ids)""").df()
         df = df.merge(old, on="post_id", how="left")
         is_new = ~df["post_id"].isin(old["post_id"])
-        is_newer = df["extracted_at"].fillna(pd.Timestamp.min) >= df["extracted_old"].fillna(pd.Timestamp.min)
+        is_newer = df["extracted_old"].isna() | (df["extracted_at"] >= df["extracted_old"])
         df = df[is_new | is_newer].copy()
         inserted = int(is_new[df.index].sum())
         updated = len(df) - inserted
@@ -164,17 +164,8 @@ def load_files(con, cfg, salt, new_files):
              cfg["name"], len(new_files), n_raw, inserted, updated)
 
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--config", required=True)
-    p.add_argument("--reload", action="store_true",
-                   help="reprocess all raw files, not only new ones (e.g. after a parser fix)")
-    args = p.parse_args()
-    load_env()
-    cfg = load_config(args.config)
-    salt = os.environ.get("AUTHOR_HASH_SALT", "dcs-case-study")
-
-    con = duckdb.connect(str(warehouse_path()))
+def create_tables(con):
+    """Create the raw tables if they do not exist; tables from an earlier version get the new columns."""
     con.execute("create schema if not exists raw")
     con.execute("""
         create table if not exists raw.posts (
@@ -191,11 +182,26 @@ def main():
     con.execute("""create table if not exists raw.labels (
         post_id varchar, relevant boolean, theme varchar, subcategory varchar, sentiment varchar,
         feedback_type varchar, severity varchar, network_mentioned varchar, label_confidence double,
-        model_version varchar, labelled_at timestamp, text_en varchar,
+        model_version varchar, labelled_at timestamp, text_en varchar, updated_at timestamp,
         primary key (post_id, model_version))""")
     con.execute("alter table raw.labels add column if not exists text_en varchar")
+    con.execute("alter table raw.labels add column if not exists updated_at timestamp")
     con.execute("""create table if not exists raw.loaded_files (
         file_path varchar primary key, source_config varchar, posts bigint, loaded_at timestamp)""")
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--config", required=True)
+    p.add_argument("--reload", action="store_true",
+                   help="reprocess all raw files, not only new ones (e.g. after a parser fix)")
+    args = p.parse_args()
+    load_env()
+    cfg = load_config(args.config)
+    salt = os.environ.get("AUTHOR_HASH_SALT", "dcs-case-study")
+
+    con = duckdb.connect(str(warehouse_path()))
+    create_tables(con)
 
     files = sorted((RAW / cfg["name"]).glob("extracted_date=*/run_*.json"))
     files = [f for f in files if not f.name.endswith(".meta.json")]

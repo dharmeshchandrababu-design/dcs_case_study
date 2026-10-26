@@ -1,0 +1,433 @@
+version: 2
+
+models:
+  - name: mart_problem_ranking
+    description: "Which problems are frequent, negative and fixable by DCS. One row per theme and subcategory (excluding \"other\"). Filter by owner_team for each team's view. Compare shares, not raw volumes across searches"
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: authors <= posts
+      - expression_is_true:
+          arguments:
+            expression: negative_posts <= posts and serious_posts <= posts and requests <= posts
+    columns:
+      - name: theme
+        description: "Main topic, from the taxonomy seed"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - access_roaming
+                  - price
+                  - billing_payment
+                  - app_digital
+                  - reliability
+                  - coverage
+                  - home_fleet
+                  - regulation
+                  - experience
+      - name: subcategory
+        description: "Subtopic, from the taxonomy seed"
+        data_tests:
+          - not_null
+      - name: owner_team
+        description: "DCS team that would act on this problem"
+        data_tests:
+          - not_null
+      - name: dcs_lever
+        description: "yes = DCS can fix it directly, partly = DCS can influence it, no = outside DCS"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 'yes'
+                  - partly
+                  - 'no'
+      - name: posts
+        description: "Relevant posts on this problem"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 1
+      - name: authors
+        description: "Distinct authors, so one loud person does not distort the ranking"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 1
+      - name: negative_posts
+        description: "Posts with negative or mixed sentiment"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: negative_share
+        description: "Negative or mixed posts divided by posts"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: serious_posts
+        description: "Posts with evidence-checked severity safety, legal or financial"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: requests
+        description: "Posts that ask for something"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: avg_engagement
+        description: "Average likes + retweets + replies + quotes per post"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: priority_score
+        description: "negative posts x lever weight (yes 1.0, partly 0.6, no 0.2) x (1 + ln(1 + average engagement)). Many complaints, fixable by DCS and getting attention rank highest; the logarithm stops one viral post dominating"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: is_small_group
+        description: "True for fewer than 20 posts. Do not over-read these rows"
+        data_tests:
+          - not_null
+
+  - name: mart_network_scorecard
+    description: "One row per network in the seed (including those with 0 posts, so CHARGE NOW's absence is visible). Read cpo rows as partner quality, emsp_competitor rows as rival offers, the dcs row as own visibility"
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: authors <= posts
+      - expression_is_true:
+          arguments:
+            expression: coalesce(negative_share, 0) + coalesce(positive_share, 0) <= 1.01
+    columns:
+      - name: network
+        description: "Display name of the charging network"
+        data_tests:
+          - unique
+          - not_null
+      - name: network_role
+        description: "Role for DCS: dcs, cpo, emsp_competitor, both, none or unknown"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - dcs
+                  - cpo
+                  - emsp_competitor
+                  - both
+                  - unknown
+      - name: posts
+        description: "Number of relevant posts"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: authors
+        description: "Number of distinct authors"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: negative_share
+        description: "Negative or mixed posts divided by posts naming this network (empty when 0 posts)"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: positive_share
+        description: "Positive posts divided by posts naming this network (empty when 0 posts)"
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: top_complaint
+        description: "The theme/subcategory with most negative posts for this network (empty when none)"
+      - name: share_of_voice
+        description: "Posts naming this network divided by all posts naming any network"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: is_small_group
+        description: "True for fewer than 20 posts"
+        data_tests:
+          - not_null
+
+  - name: mart_network_feedback
+    description: "What each network is praised and criticised for. One row per network, feedback group and theme/subcategory. praised = positive, criticised = negative or mixed"
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - network
+              - feedback_group
+              - theme
+              - subcategory
+      - expression_is_true:
+          arguments:
+            expression: authors <= posts
+    columns:
+      - name: network
+        description: "Display name of the charging network"
+        data_tests:
+          - not_null
+      - name: network_role
+        description: "Role for DCS: dcs, cpo, emsp_competitor, both, none or unknown"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - dcs
+                  - cpo
+                  - emsp_competitor
+                  - both
+      - name: feedback_group
+        description: "praised (positive), criticised (negative or mixed) or neutral"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - praised
+                  - criticised
+                  - neutral
+      - name: theme
+        description: "Main topic, from the taxonomy seed"
+        data_tests:
+          - not_null
+      - name: subcategory
+        description: "Subtopic, from the taxonomy seed"
+        data_tests:
+          - not_null
+      - name: posts
+        description: "Number of relevant posts"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 1
+      - name: authors
+        description: "Number of distinct authors"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 1
+      - name: share_within_group
+        description: "Posts in this theme divided by all posts of this network and feedback group"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: engagement
+        description: "Likes + retweets + replies + quotes"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+
+  - name: mart_voice_examples
+    description: "Drivers' own words: the 3 most engaged complaints or requests per problem, plus every serious post. risk_bucket: dcs_risk (serious and about DCS), partner_risk (serious, about a CPO), market_watch (serious, other)"
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: (risk_bucket is null) = (severity = 'none')
+    columns:
+      - name: date_key
+        description: "Date the post was written; key into dim_date"
+        data_tests:
+          - not_null
+      - name: theme
+        description: "Main topic, from the taxonomy seed"
+        data_tests:
+          - not_null
+      - name: subcategory
+        description: "Subtopic, from the taxonomy seed"
+        data_tests:
+          - not_null
+      - name: owner_team
+        description: "DCS team that would act on this problem"
+        data_tests:
+          - not_null
+      - name: sentiment
+        description: "Author's feeling about charging"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - positive
+                  - neutral
+                  - negative
+                  - mixed
+      - name: feedback_type
+        description: "What the post does: complaint, praise, request, question or information"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - complaint
+                  - praise
+                  - request
+                  - question
+                  - information
+      - name: severity
+        description: "Severity: safety, legal, financial or none"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - safety
+                  - legal
+                  - financial
+                  - none
+      - name: network
+        description: "Display name of the charging network"
+        data_tests:
+          - not_null
+      - name: network_role
+        description: "Role for DCS: dcs, cpo, emsp_competitor, both, none or unknown"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - dcs
+                  - cpo
+                  - emsp_competitor
+                  - both
+                  - none
+                  - unknown
+      - name: risk_bucket
+        description: "Empty when the post is not serious"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - dcs_risk
+                  - partner_risk
+                  - market_watch
+      - name: engagement
+        description: "Likes + retweets + replies + quotes"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: text_en
+        description: "English text, for every reader"
+        data_tests:
+          - not_null
+      - name: text_original
+        description: "Original text, shown next to quotes so nothing is twisted in translation"
+        data_tests:
+          - not_null
+
+  - name: mart_monthly_trend
+    description: "Posts and negative share per month, only for themes DCS can act on (lever yes or partly)"
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - month_start
+              - theme
+    columns:
+      - name: month_start
+        description: "First day of the month"
+        data_tests:
+          - not_null
+      - name: theme
+        description: "Main topic, from the taxonomy seed"
+        data_tests:
+          - not_null
+      - name: posts
+        description: "Number of relevant posts"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 1
+      - name: negative_share
+        description: "Negative or mixed posts divided by posts in this month and theme"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: is_small_group
+        description: "True for fewer than 10 posts"
+        data_tests:
+          - not_null
+
+  - name: mart_search_funnel
+    description: "Data quality view. Per search query: posts found, relevant posts, relevance rate, relevant posts in scope. A post found by several searches counts in each of them. Shows where the signal is and which searches to change"
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: relevant_posts <= posts_found and relevant_in_scope <= relevant_posts
+    columns:
+      - name: search
+        description: "Search query (theme and language)"
+        data_tests:
+          - unique
+          - not_null
+      - name: posts_found
+        description: "Posts the search returned"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 1
+      - name: relevant_posts
+        description: "Posts the labeller marked relevant"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+      - name: relevance_rate
+        description: "Relevant posts divided by posts found"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: relevant_in_scope
+        description: "Relevant posts not clearly outside Europe"
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0

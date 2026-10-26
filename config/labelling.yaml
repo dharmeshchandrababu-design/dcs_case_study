@@ -4,5 +4,7 @@
 #   anthropic : Claude through the API (future option, needs ANTHROPIC_API_KEY)
 provider: ollama
 model: qwen2.5:7b          # for ollama; e.g. a claude model name for anthropic
+                           # second pass: run_pipeline.sh relabels the relevant posts with qwen2.5:14b
+                           # (label.py --model qwen2.5:14b --only-relevant); the newest label per post is used
 batch_size: 5              # posts per AI call (smaller batches = fewer skipped posts)
 source_config: ev_charging # which loaded posts to label

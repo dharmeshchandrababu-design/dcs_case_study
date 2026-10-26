@@ -334,7 +334,7 @@ def translation_pass(con, provider, model, source_config, size, limit=None, retr
     # from it. An interrupted run simply continues with the same command.
     if not retranslate:
         con.execute("""
-        update raw.labels set text_en = t.text_en
+        update raw.labels set text_en = t.text_en, updated_at = now()
         from (select post_id, max(text_en) as text_en from raw.labels where text_en is not null group by post_id) t
         where raw.labels.post_id = t.post_id and raw.labels.text_en is null
         """)
@@ -358,7 +358,7 @@ def translation_pass(con, provider, model, source_config, size, limit=None, retr
         result = translate_batch(provider, model, batch)
         for single in [b for b in batch if b[0] not in result and len(batch) > 1]:
             result.update(translate_batch(provider, model, [single]))   # retry skipped posts one by one
-        con.executemany("update raw.labels set text_en = ? where post_id = ? and model_version = ?",
+        con.executemany("update raw.labels set text_en = ?, updated_at = now() where post_id = ? and model_version = ?",
                         [(t, pid, versions[pid]) for pid, t in result.items()])
         done += len(result)
         log.info("translation progress %d/%d", min(i + size, len(todo)), len(todo))
@@ -390,10 +390,12 @@ def main():
         create table if not exists raw.labels (
             post_id varchar, relevant boolean, theme varchar, subcategory varchar, sentiment varchar,
             feedback_type varchar, severity varchar, network_mentioned varchar, label_confidence double,
-            model_version varchar, labelled_at timestamp, text_en varchar,
+            model_version varchar, labelled_at timestamp, text_en varchar, updated_at timestamp,
             primary key (post_id, model_version))
     """)
     con.execute("alter table raw.labels add column if not exists text_en varchar")
+    # updated_at changes whenever a row changes (new label or new translation); dbt reads only newer rows
+    con.execute("alter table raw.labels add column if not exists updated_at timestamp")
     # only posts that have no label from this labeller yet (incremental, saves AI calls)
     todo = con.execute("""
         select p.post_id, p.text from raw.posts p
@@ -419,8 +421,8 @@ def main():
                 for pid, (l, mv) in results.items()]
         con.executemany("""insert or replace into raw.labels
             (post_id, relevant, theme, subcategory, sentiment, feedback_type, severity,
-             network_mentioned, label_confidence, model_version, labelled_at)
-            values (?,?,?,?,?,?,?,?,?,?,?)""", rows)
+             network_mentioned, label_confidence, model_version, labelled_at, updated_at)
+            values (?,?,?,?,?,?,?,?,?,?,?,?)""", [r + (now,) for r in rows])
         done += len(rows)
         if provider != "keyword":
             log.info("progress %d/%d", done, len(todo))

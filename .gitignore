@@ -11,3 +11,9 @@ dbt/dbt_packages/
 .DS_Store
 _to_delete/
 findings/labels_review.csv
+.vscode/
+dbt/.user.yml
+explore/
+findings/FINDINGS.md
+findings/pilot_hand_labels.csv
+.pytest_cache/

@@ -1,0 +1,76 @@
+version: 2
+
+seeds:
+  - name: taxonomy
+    description: "The fixed category list. Used by the AI prompt (label.py reads this file) and by dim_theme, so categories are defined once. owner_team and dcs_lever are business knowledge, editable without touching code"
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - theme
+              - subcategory
+    columns:
+      - name: theme
+        description: "Main topic, from the taxonomy seed"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - access_roaming
+                  - price
+                  - billing_payment
+                  - app_digital
+                  - reliability
+                  - coverage
+                  - home_fleet
+                  - regulation
+                  - experience
+                  - other
+      - name: subcategory
+        description: "Subtopic, from the taxonomy seed"
+        data_tests:
+          - unique
+          - not_null
+      - name: owner_team
+        description: "DCS team that would act on this problem"
+        data_tests:
+          - not_null
+      - name: dcs_lever
+        description: "yes = DCS can fix it directly, partly = DCS can influence it, no = outside DCS"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 'yes'
+                  - partly
+                  - 'no'
+      - name: description
+        description: "Plain-language definition of the problem"
+        data_tests:
+          - not_null
+
+  - name: networks
+    description: "Charging networks with their role for DCS and their aliases (regular expression alternatives used to match the names the labeller returns). Roles to be confirmed with DCS"
+    columns:
+      - name: network
+        description: "Display name of the charging network"
+        data_tests:
+          - unique
+          - not_null
+      - name: network_role
+        description: "Role for DCS: dcs, cpo, emsp_competitor, both, none or unknown"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - dcs
+                  - cpo
+                  - emsp_competitor
+                  - both
+      - name: aliases
+        description: "Alternative spellings (regular expression alternatives) used to match the names the labeller returns"
+        data_tests:
+          - not_null
