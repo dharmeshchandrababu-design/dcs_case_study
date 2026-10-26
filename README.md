@@ -9,11 +9,10 @@ labels each post with an AI model, and models the result in dbt so DCS teams get
   so the analysis is built on 1,597 EV charging posts from the last 12 months (German and English).
 - **Findings for the business teams:** see the findings deck.
 
-**Why this approach.** From my conversations with the team, I understood the role needs someone who builds
-reliable pipelines *and* turns the data into something internal stakeholders want to use. So I built the brief
-exactly as asked, then used the same pipeline to answer business questions: what drivers struggle with, how
-they see each network, where CHARGE NOW is (in)visible, and what Product, Pricing, Partner management and
-Marketing can do next. Every reporting model answers one business question for one team.
+**Why this approach.** From my conversations with the different teams, I understood that you are looking for
+someone who turns data into decisions that internal stakeholders and business owners can act on. So my goal was
+actionable insights, not just data: every reporting model answers one business question, and every finding in
+the deck points to a concrete next step for a specific team.
 
 ## Results in one view
 
@@ -43,7 +42,19 @@ charging abroad) are what CHARGE NOW solves, but nobody names it. DCS's court wi
 | Is retweet | `is_retweet` (computed from `retweeted_tweet`; retweets kept for #ChargeNow, excluded in the EV searches) |
 | Empty results, API changes, source unavailability, logging, fault tolerance, scalability | See Robustness below |
 | Part B (requirement change) | No new requirement was received before submission. Searches, languages, interval and labelling are config-driven (`config/*.yaml`), so a change is mostly a config edit plus a rerun |
-| Part C (analytics) | dbt star schema and six reporting marts, findings deck, lineage via `dbt docs generate` |
+| Part C (walkthrough) | See [Part C at a glance](#part-c-at-a-glance) below |
+
+## Part C at a glance
+
+| Question | Answer | Details |
+|---|---|---|
+| **Structure** | Python for extract, load and label; dbt for everything after the raw tables: staging, intermediate, star schema (`fct_posts` and three dimensions), six reporting marts | [Architecture](#architecture-elt), [dbt models](#dbt-models) |
+| **Improvements implemented** | Incremental load, labelling and staging (only new data is processed); 279 dbt tests, a source freshness check and 24 Python unit tests; prompt versions v1 to v3 and a 14b relabel of relevant posts, measured against reference labels; an evidence check before a post counts as a financial, legal or safety risk; privacy by design (hashed authors, masked usernames, a test that fails if a username reaches the marts) | [Incremental design](#incremental-design-and-daily-operation), [Robustness](#robustness), [AI labelling](#ai-labelling-and-accuracy) |
+| **Improvements possible** | Better relevance (exclusions, parent posts for replies, human review where models disagree), incremental `fct_posts`, a bridge table for posts naming several networks, more sources | [What I would do next](#what-i-would-do-next) |
+| **Orchestration** | Built as four rerunnable steps in a fixed order (`run_pipeline.sh`: extract, load, label, dbt build), each one an Airflow task in production. A one-time backfill, then a daily run over the last 2 to 3 days | [Incremental design](#incremental-design-and-daily-operation) |
+| **Monitoring** | Today: timestamped logs per step, a run record per extract (status, posts per search), dbt tests on every build, freshness on `raw.posts` (warn after 2 days, error after 7). In production: Airflow alerts on failed or stopped runs and on freshness, plus a small dashboard of posts per day, relevance rate and labelling failures, so an API change shows up as a sudden drop | [Robustness](#robustness) |
+| **What I actually built** | The full pipeline on a laptop: X API → raw JSON landing zone → DuckDB → AI labels (local Ollama model) → dbt marts → findings deck. Same design as production, smaller scale | This README |
+| **Dream architecture (unconstrained)** | Near real-time ingestion from all public channels (X, Reddit, forums, app reviews) plus DCS's own support tickets and session data; Claude labelling inside the warehouse; one semantic layer so every team uses the same metric definitions; and a closed loop: a problem found in social data is checked against session failures, sent to the owning team and tracked until it is fixed | [Target architecture](#target-architecture-at-dcs-scale) |
 
 ## Architecture (ELT)
 
