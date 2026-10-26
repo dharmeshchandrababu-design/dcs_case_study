@@ -194,6 +194,28 @@ Accuracy against 28 to 30 reference labels (Claude, reviewed by me), indicative 
 Relevance and sentiment are solid; themes are direction only, so the key findings were checked by reading
 the posts. `python pilot.py export` / `compare` reproduces the check.
 
+**Relevance funnel.** 1,597 posts extracted → 421 marked relevant by `qwen2.5:7b` → rechecked by `qwen2.5:14b`:
+304 still relevant → 297 after removing 7 authors clearly outside Europe (134 with a European location, 163 unknown).
+
+**Why the two models disagree on about 120 posts.** Reading a sample of them shows four patterns:
+- *Ambiguous names:* EnBW is also an energy company, so posts about nuclear or wind power ("EnBW says it is too
+  expensive") match the competitor search.
+- *EV debate, not charging experience:* political or "EV myth" arguments that mention a charger in passing.
+- *Replies without context:* "Wo ist Ionity teuer?" only makes sense with the post it answers, which is not fetched.
+- *Advertising:* wallbox and installer posts.
+
+The 7b model says "relevant" too easily. The 14b model is stricter but sometimes too strict: it also rejected some
+real experiences (e.g. a driver reporting broken chargers). On the 28 reference posts, relevance was 93% (7b) vs 87%
+(14b), so relevance is the least certain step and the 297 is a careful count, not an exact one.
+
+**How to make it better:**
+- Sharper searches: exclusions for known noise (e.g. EnBW with nuclear or wind terms), see `config/`.
+- Fetch the parent post for replies so the model sees the context.
+- A clearer relevance rule in the prompt with a few labelled examples (yes and no).
+- A larger hand-labelled sample (150 to 200 posts) and precision and recall for relevance, not just accuracy.
+- Posts where two models disagree go to a short human review list instead of being decided by one model.
+- In production, a stronger model such as Claude for the relevance decision, keeping a small model for cheap pre-filtering.
+
 ## Privacy
 - Raw files and the database stay local and are not committed (`.gitignore`).
 - Only salted, hashed author ids enter DuckDB; usernames are never loaded; @mentions in the text are masked.
