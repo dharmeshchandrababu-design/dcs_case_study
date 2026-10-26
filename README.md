@@ -252,8 +252,8 @@ real experiences (e.g. a driver reporting broken chargers). On the 28 reference 
 ## Target architecture at DCS scale
 
 ```
-X, Reddit, forums, app reviews ─┐
-support tickets, session data ──┼─> landing zone (cloud storage, by date) ─> Snowflake raw
+X, Reddit, forums, Linkedin, app reviews ─┐
+support tickets,session data ──┼─> landing zone (cloud storage, by date) ─> Snowflake raw
                                 │      extract + load: Python tasks in Airflow, retries and alerts
                                 └─> labelling: Claude / warehouse AI functions, versioned prompts
 Snowflake raw ─> dbt (same staging, intermediate, core, reporting models; tests and freshness) ─>
