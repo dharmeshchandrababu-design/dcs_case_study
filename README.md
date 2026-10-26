@@ -36,6 +36,8 @@ charging abroad) are what CHARGE NOW solves, but nobody names it. DCS's court wi
 | Tweet count | `author_post_count` (the author's total posts, `statusesCount`) |
 | Is retweet | `is_retweet` (computed from `retweeted_tweet`; retweets kept for #ChargeNow, excluded in the EV searches) |
 | Empty results, API changes, source unavailability, logging, fault tolerance, scalability | See Robustness below |
+| Part B (requirement change) | No new requirement was received before submission. Searches, languages, interval and labelling are config-driven (`config/*.yaml`), so a change is mostly a config edit plus a rerun |
+| Part C (analytics) | dbt star schema and six reporting marts, findings deck, lineage via `dbt docs generate` |
 
 ## Architecture (ELT)
 
@@ -241,6 +243,10 @@ real experiences (e.g. a driver reporting broken chargers). On the 28 reference 
 - Move the landing zone to cloud storage, the warehouse to Snowflake, and labelling to Claude (or warehouse AI functions).
 - Add the OEM charging brands (BMW Charging, Mercedes me Charge) to the searches; exclude known noise.
 - Apply the same labelling to internal sources such as support tickets, and join with session data to validate the findings.
+- Extend the sources to Reddit, EV forums and app store reviews (after checking each platform's terms and API access).
+- Give Marketing a daily list of post links (`x.com/i/status/<post_id>`) on problems CHARGE NOW solves, to answer by hand; links only, no personal data.
+- Improve relevance (the least certain step): exclusions for known noise, parent posts for replies, a larger hand-labelled sample, human review where models disagree.
+- Make `fct_posts` incremental and add a network bridge table for posts that name several networks.
 
 ## Repository
 ```
